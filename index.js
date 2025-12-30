@@ -1,55 +1,14 @@
+require("dotenv").config();
 const path = require("path");
 const http = require("http");
 const express = require("express");
 const WebSocket = require("ws");
 const { randomUUID } = require("crypto");
+const { pickWinner } = require("./ai");
+const { CRICKETERS } = require("./cricketers");
 
 const PORT = process.env.PORT || 3000;
 const BID_WINDOW_MS = 30_000;
-
-const CRICKETERS = [
-  { name: "Virat Kohli", basePrice: 20 },
-  { name: "Rohit Sharma", basePrice: 18 },
-  { name: "Jasprit Bumrah", basePrice: 17 },
-  { name: "Hardik Pandya", basePrice: 16 },
-  { name: "Ravindra Jadeja", basePrice: 15 },
-  { name: "KL Rahul", basePrice: 14 },
-  { name: "Shubman Gill", basePrice: 13 },
-  { name: "Suryakumar Yadav", basePrice: 12 },
-  { name: "Shreyas Iyer", basePrice: 11 },
-  { name: "Mohammed Shami", basePrice: 10 },
-  { name: "Kuldeep Yadav", basePrice: 9 },
-  { name: "Yuzvendra Chahal", basePrice: 9 },
-  { name: "Axar Patel", basePrice: 9 },
-  { name: "Ishan Kishan", basePrice: 8 },
-  { name: "Ruturaj Gaikwad", basePrice: 8 },
-  { name: "Prithvi Shaw", basePrice: 7 },
-  { name: "Sanju Samson", basePrice: 7 },
-  { name: "Rahul Tripathi", basePrice: 7 },
-  { name: "Deepak Chahar", basePrice: 6 },
-  { name: "Arshdeep Singh", basePrice: 6 },
-  { name: "Shardul Thakur", basePrice: 6 },
-  { name: "Washington Sundar", basePrice: 6 },
-  { name: "Bhuvneshwar Kumar", basePrice: 6 },
-  { name: "Umran Malik", basePrice: 5 },
-  { name: "Mohammed Siraj", basePrice: 5 },
-  { name: "Varun Chakravarthy", basePrice: 5 },
-  { name: "Harshal Patel", basePrice: 5 },
-  { name: "Dinesh Karthik", basePrice: 4 },
-  { name: "Wriddhiman Saha", basePrice: 4 },
-  { name: "Mayank Agarwal", basePrice: 4 },
-  { name: "Devdutt Padikkal", basePrice: 4 },
-  { name: "Tilak Varma", basePrice: 4 },
-  { name: "Venkatesh Iyer", basePrice: 4 },
-  { name: "Rahul Tewatia", basePrice: 4 },
-  { name: "Ravi Bishnoi", basePrice: 4 },
-  { name: "Shivam Dube", basePrice: 3 },
-  { name: "Abhishek Sharma", basePrice: 3 },
-  { name: "Sai Sudharsan", basePrice: 3 },
-  { name: "T Natarajan", basePrice: 3 },
-  { name: "Ajinkya Rahane", basePrice: 3 },
-  { name: "Cheteshwar Pujara", basePrice: 2 }
-];
 
 class Player {
   constructor(id, name, purse) {
@@ -74,6 +33,7 @@ class AuctionGame {
     this.id = generateCode();
     this.hostId = hostId;
     this.status = "CREATED";
+    this.winnerId = null;
     this.players = new Map();
     this.addPlayer(hostId, hostName, purse);
     this.queue = shuffle([...CRICKETERS]);
@@ -165,6 +125,7 @@ class AuctionGame {
       id: this.id,
       hostId: this.hostId,
       status: this.status,
+      winnerId: this.winnerId,
       currentCricketer: this.currentCricketer,
       currentBid: this.currentBid,
       timerEndsAt: this.timerEndsAt,
@@ -234,6 +195,8 @@ const wss = new WebSocket.Server({ server });
 const connections = new Map(); // playerId -> ws
 const playerToGame = new Map(); // playerId -> gameId
 
+const pendingWinner = new Set();
+
 function send(ws, payload) {
   if (ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify(payload));
@@ -267,6 +230,10 @@ wss.on("connection", (ws, req) => {
 
   connections.set(playerId, ws);
   send(ws, { type: "connected", playerId });
+
+  ws.on("error", (err) => {
+    console.error("WebSocket error", err);
+  });
 
   ws.on("message", (message) => {
     let payload;
@@ -371,7 +338,8 @@ setInterval(() => {
       });
     }
     if (game.status === "OVER") {
-      broadcast(game, { type: "game_over", gameId: game.id });
+      broadcast(game, { type: "game_over", gameId: game.id, winnerId: game.winnerId });
+      ensureWinner(game);
     }
     broadcastState(game);
   });
@@ -391,4 +359,34 @@ function shuffle(arr) {
 
 function generateCode() {
   return Math.random().toString(36).slice(2, 7).toUpperCase();
+}
+
+function ensureWinner(game) {
+  if (game.winnerId || pendingWinner.has(game.id)) return;
+  if (!process.env.OPENAI_API_KEY) {
+    broadcast(game, {
+      type: "winner_declared",
+      gameId: game.id,
+      winnerId: null,
+      error: "Missing OPENAI_API_KEY"
+    });
+    return;
+  }
+  pendingWinner.add(game.id);
+  pickWinner(game.toJSON())
+    .then((winnerId) => {
+      game.winnerId = winnerId || null;
+      broadcast(game, { type: "winner_declared", gameId: game.id, winnerId: game.winnerId });
+      broadcastState(game);
+    })
+    .catch((err) => {
+      console.error("AI winner selection failed", err);
+      broadcast(game, {
+        type: "winner_declared",
+        gameId: game.id,
+        winnerId: null,
+        error: "AI selection failed"
+      });
+    })
+    .finally(() => pendingWinner.delete(game.id));
 }

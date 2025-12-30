@@ -1,9 +1,10 @@
+// Keep player identity per browser tab to avoid disconnecting other tabs.
 function getStoredPlayerId() {
-  return localStorage.getItem("auction_player_id");
+  return sessionStorage.getItem("auction_player_id");
 }
 
 function storePlayerId(id) {
-  localStorage.setItem("auction_player_id", id);
+  sessionStorage.setItem("auction_player_id", id);
 }
 
 class SocketClient {
@@ -62,7 +63,12 @@ class AuctionUI {
 
   renderState(state, selfId) {
     this.setGameId(state?.id);
-    this.gameStatus.textContent = `Status: ${state?.status ?? "—"}`;
+    const winnerName = state?.winnerId
+      ? state.players.find((p) => p.id === state.winnerId)?.name || state.winnerId
+      : null;
+    this.gameStatus.textContent = state?.winnerId
+      ? `Status: ${state?.status ?? "—"} — Winner: ${winnerName}`
+      : `Status: ${state?.status ?? "—"}`;
     const cricketer = state?.currentCricketer;
     this.currentName.textContent = cricketer?.name ?? "—";
     this.basePrice.textContent = cricketer ? `${cricketer.basePrice}` : "—";
@@ -215,7 +221,20 @@ class AuctionApp {
         this.ui.renderTimer(this.state?.timerEndsAt);
         break;
       case "game_over":
+        this.state = { ...(this.state || {}), winnerId: msg.winnerId || this.state?.winnerId || null };
         this.notify("Auction over");
+        this.ui.renderState(this.state, this.selfId);
+        break;
+      case "winner_declared":
+        this.state = { ...(this.state || {}), winnerId: msg.winnerId || null };
+        if (msg.winnerId) {
+          const winnerName =
+            this.state.players?.find((p) => p.id === msg.winnerId)?.name || msg.winnerId;
+          this.notify(`Winner: ${winnerName}`);
+        } else {
+          this.notify("Winner could not be determined", true);
+        }
+        this.ui.renderState(this.state, this.selfId);
         break;
       case "error":
         this.notify(msg.message || "Error", true);

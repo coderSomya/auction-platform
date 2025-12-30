@@ -2,7 +2,11 @@
 
 
 ### Get started
+- Set the env variable OPENAI_API_KEY=<your_key>
+
 ```
-npm i ws express
+npm i ws express dotenv node-fetch
 node index.js
 ```
+
+

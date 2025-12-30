@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Auction Room</title>
+  <link rel="stylesheet" href="./styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app">
+    <header class="app__header">
+      <div>
+        <h1>Auction</h1>
+        <p class="muted">Live bidding room</p>
+      </div>
+      <div class="status-pill" id="connectionStatus">Connecting…</div>
+    </header>
+
+    <section class="panel">
+      <div class="panel__header">
+        <div>
+          <h3>Room</h3>
+          <p class="muted">Game ID: <span id="gameIdDisplay">—</span></p>
+        </div>
+        <div class="actions">
+          <button id="copyCodeBtn" class="ghost">Copy Code</button>
+          <button id="startBtn" disabled>Start Auction</button>
+        </div>
+      </div>
+      <div class="room-grid">
+        <div>
+          <h4>Players</h4>
+          <ul id="playersList" class="list"></ul>
+        </div>
+        <div>
+          <h4>Status</h4>
+          <div id="gameStatus" class="status-box">Waiting for game</div>
+          <div class="current">
+            <div>
+              <p class="muted tiny">Current Cricketer</p>
+              <h3 id="currentName">—</h3>
+              <p class="muted">Base: <span id="basePrice">—</span> cr</p>
+            </div>
+            <div class="timer" id="timer">00s</div>
+          </div>
+          <div class="bid-box">
+            <p class="muted tiny">Current Bid</p>
+            <h2 id="currentBid">—</h2>
+            <p class="muted tiny" id="bidder">No bids yet</p>
+          </div>
+          <form id="bidForm" class="form inline">
+            <input type="number" name="amount" placeholder="Your bid" min="1" step="1">
+            <button type="submit">Bid</button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel__header">
+        <h3>Squads</h3>
+        <p class="muted">Live view of every team.</p>
+      </div>
+      <div id="squads" class="squads"></div>
+    </section>
+  </div>
+
+  <script src="./game.js"></script>
+</body>
+</html>
+

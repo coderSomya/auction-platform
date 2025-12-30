@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Auction</title>
+  <link rel="stylesheet" href="./styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app">
+    <header class="app__header">
+      <div>
+        <h1>Auction Lobby</h1>
+        <p class="muted">Create or join a room to start bidding.</p>
+      </div>
+    </header>
+
+    <section class="panel grid two">
+      <div>
+        <h3>Create Game</h3>
+        <form id="createForm" class="form">
+          <label>
+            Your Name
+            <input type="text" name="name" placeholder="Host name" required>
+          </label>
+          <label>
+            Starting Purse (cr)
+            <input type="number" name="purse" value="100" min="1" step="1">
+          </label>
+          <button type="submit">Create</button>
+        </form>
+      </div>
+      <div>
+        <h3>Join Game</h3>
+        <form id="joinForm" class="form">
+          <label>
+            Game Code
+            <input type="text" name="gameId" placeholder="ABCDE" required>
+          </label>
+          <label>
+            Your Name
+            <input type="text" name="name" placeholder="Player name" required>
+          </label>
+          <label>
+            Starting Purse (cr)
+            <input type="number" name="purse" value="100" min="1" step="1">
+          </label>
+          <button type="submit">Join</button>
+        </form>
+      </div>
+    </section>
+  </div>
+
+  <script src="./lobby.js"></script>
+</body>
+</html>
+
